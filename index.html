@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="description" content="WebAR - GLBモデルを現実世界に配置できるAR体験アプリ" />
+    <title>WebAR Viewer | GLBモデルをARで体験</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <!-- UI Overlay -->
+    <div id="ui-overlay">
+      <!-- Landing Screen -->
+      <div id="landing-screen" class="screen active">
+        <div class="hero-bg"></div>
+        <div class="landing-content">
+          <div class="logo-container">
+            <div class="logo-icon">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M24 4L44 16V32L24 44L4 32V16L24 4Z" stroke="url(#grad1)" stroke-width="2" fill="none"/>
+                <path d="M24 12L36 19V33L24 40L12 33V19L24 12Z" fill="url(#grad2)" opacity="0.3"/>
+                <circle cx="24" cy="24" r="6" fill="url(#grad1)"/>
+                <defs>
+                  <linearGradient id="grad1" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#6366f1"/>
+                    <stop offset="100%" stop-color="#06b6d4"/>
+                  </linearGradient>
+                  <linearGradient id="grad2" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#6366f1"/>
+                    <stop offset="100%" stop-color="#06b6d4"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <div class="logo-text">
+              <h1>WebAR Viewer</h1>
+              <p class="tagline">現実世界に3Dモデルを配置</p>
+            </div>
+          </div>
+
+          <div class="upload-card" id="upload-card">
+            <div class="upload-zone" id="upload-zone">
+              <div class="upload-icon">
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="8" y="8" width="48" height="48" rx="12" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4"/>
+                  <path d="M32 40V24M32 24L26 30M32 24L38 30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M20 44H44" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+                </svg>
+              </div>
+              <p class="upload-title">GLBファイルをここにドロップ</p>
+              <p class="upload-sub">または</p>
+              <label for="file-input" class="btn btn-secondary" id="file-btn">
+                ファイルを選択
+              </label>
+              <input type="file" id="file-input" accept=".glb,.gltf" hidden />
+              <p class="upload-hint">対応形式: .glb / .gltf</p>
+            </div>
+          </div>
+
+          <div class="model-info" id="model-info" hidden>
+            <div class="model-info-inner">
+              <div class="model-thumb">
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 4L36 13V27L20 36L4 27V13L20 4Z" stroke="url(#grad3)" stroke-width="2" fill="none"/>
+                  <defs><linearGradient id="grad3" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>
+                </svg>
+              </div>
+              <div class="model-details">
+                <p class="model-name" id="model-name">—</p>
+                <p class="model-size" id="model-size">—</p>
+              </div>
+              <div class="status-badge success">読込済</div>
+            </div>
+          </div>
+
+          <div class="action-area">
+            <button id="ar-btn" class="btn btn-primary" disabled>
+              <span class="btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 7V5C3 3.89543 3.89543 3 5 3H7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M17 3H19C20.1046 3 21 3.89543 21 5V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M21 17V19C21 20.1046 20.1046 21 19 21H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M7 21H5C3.89543 21 3 20.1046 3 19V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </span>
+              ARカメラを起動
+            </button>
+            <p class="ar-note" id="ar-note">GLBファイルを読み込むとARが起動できます</p>
+          </div>
+
+          <div class="steps-guide">
+            <div class="step">
+              <div class="step-num">1</div>
+              <div class="step-text">GLBファイルを選択</div>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+              <div class="step-num">2</div>
+              <div class="step-text">ARカメラを起動</div>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+              <div class="step-num">3</div>
+              <div class="step-text">床・机をスキャン</div>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+              <div class="step-num">4</div>
+              <div class="step-text">タップして設置</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AR Canvas (Three.js renders here) -->
+    <canvas id="ar-canvas"></canvas>
+
+    <!-- AR HUD -->
+    <div id="ar-hud" hidden>
+      <div class="hud-top">
+        <button id="exit-ar-btn" class="hud-btn exit-btn">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          終了
+        </button>
+        <div class="hud-status" id="hud-status">
+          <div class="hud-dot scanning"></div>
+          <span id="hud-status-text">平面を探しています...</span>
+        </div>
+        <button id="reset-btn" class="hud-btn reset-btn">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12C3 7.02944 7.02944 3 12 3C15.3352 3 18.2465 4.7999 19.9 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M21 3V7.5H16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 12C21 16.9706 16.9706 21 12 21C8.66481 21 5.75352 19.2001 4.1 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M3 21V16.5H7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          リセット
+        </button>
+      </div>
+      <div class="hud-hint" id="hud-hint">
+        <div class="hint-bubble">
+          <span id="hint-text">カメラを床や机に向けてください</span>
+        </div>
+      </div>
+      <div class="hud-bottom">
+        <p class="tap-label" id="tap-label" hidden>タップしてモデルを設置</p>
+      </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" hidden>
+      <div class="loading-spinner"></div>
+      <p id="loading-text">モデルを読み込んでいます...</p>
+    </div>
+
+    <!-- Error Toast -->
+    <div id="error-toast" class="toast" hidden>
+      <svg viewBox="0 0 24 24" fill="none" class="toast-icon">
+        <circle cx="12" cy="12" r="9" stroke="#ef4444" stroke-width="2"/>
+        <path d="M12 8V12M12 16H12.01" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span id="error-message">エラーが発生しました</span>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
