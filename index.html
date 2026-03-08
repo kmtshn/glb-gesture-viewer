@@ -4,160 +4,182 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <meta name="description" content="WebAR - GLBモデルを現実世界に配置できるAR体験アプリ" />
-    <title>WebAR Viewer | GLBモデルをARで体験</title>
+    <meta name="description" content="手のジェスチャーでGLBモデルを操作するMagic Hand AR体験アプリ" />
+    <title>Magic Hand | ジェスチャーで3Dモデルを操る</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/style.css" />
+    <!-- MediaPipe Hands CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
   </head>
   <body>
-    <!-- UI Overlay -->
-    <div id="ui-overlay">
-      <!-- Landing Screen -->
-      <div id="landing-screen" class="screen active">
-        <div class="hero-bg"></div>
-        <div class="landing-content">
-          <div class="logo-container">
-            <div class="logo-icon">
-              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M24 4L44 16V32L24 44L4 32V16L24 4Z" stroke="url(#grad1)" stroke-width="2" fill="none"/>
-                <path d="M24 12L36 19V33L24 40L12 33V19L24 12Z" fill="url(#grad2)" opacity="0.3"/>
-                <circle cx="24" cy="24" r="6" fill="url(#grad1)"/>
-                <defs>
-                  <linearGradient id="grad1" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stop-color="#6366f1"/>
-                    <stop offset="100%" stop-color="#06b6d4"/>
-                  </linearGradient>
-                  <linearGradient id="grad2" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stop-color="#6366f1"/>
-                    <stop offset="100%" stop-color="#06b6d4"/>
-                  </linearGradient>
-                </defs>
+
+    <!-- ── Landing Screen ── -->
+    <div id="landing-screen">
+      <div class="hero-bg"></div>
+      <div class="landing-content">
+
+        <div class="logo-area">
+          <div class="logo-icon">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M32 8C20 8 12 16 12 28C12 40 20 52 32 56C44 52 52 40 52 28C52 16 44 8 32 8Z" stroke="url(#logoGrad)" stroke-width="2" fill="url(#logoFill)" opacity="0.8"/>
+              <!-- Hand shape -->
+              <path d="M24 34V22M24 22C24 20.9 24.9 20 26 20C27.1 20 28 20.9 28 22V30M28 30V20M28 20C28 18.9 28.9 18 30 18C31.1 18 32 18.9 32 20V30M32 30V22M32 22C32 20.9 32.9 20 34 20C35.1 20 36 20.9 36 22V34M36 34V28M36 28C36 26.9 36.9 26 38 26C39.1 26 40 26.9 40 28V34C40 40.6 34.6 46 28 46C21.4 46 16 40.6 16 34" stroke="url(#handGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <defs>
+                <linearGradient id="logoGrad" x1="12" y1="8" x2="52" y2="56" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#6366f1"/>
+                  <stop offset="100%" stop-color="#06b6d4"/>
+                </linearGradient>
+                <linearGradient id="logoFill" x1="12" y1="8" x2="52" y2="56" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#6366f1" stop-opacity="0.15"/>
+                  <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.05"/>
+                </linearGradient>
+                <linearGradient id="handGrad" x1="16" y1="18" x2="40" y2="46" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#a5b4fc"/>
+                  <stop offset="100%" stop-color="#67e8f9"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <h1>Magic Hand</h1>
+            <p class="tagline">ジェスチャーで3Dモデルを操る</p>
+          </div>
+        </div>
+
+        <!-- File Upload -->
+        <div class="upload-card">
+          <div class="upload-zone" id="upload-zone">
+            <div class="upload-icon">
+              <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="8" width="48" height="48" rx="12" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4"/>
+                <path d="M32 40V24M32 24L26 30M32 24L38 30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 44H44" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
               </svg>
             </div>
-            <div class="logo-text">
-              <h1>WebAR Viewer</h1>
-              <p class="tagline">現実世界に3Dモデルを配置</p>
-            </div>
+            <p class="upload-title">GLBファイルをドロップ</p>
+            <p class="upload-sub">または</p>
+            <label for="file-input" class="btn btn-secondary" id="file-btn">
+              ファイルを選択
+            </label>
+            <input type="file" id="file-input" accept=".glb,.gltf" hidden />
+            <p class="upload-hint">対応形式: .glb / .gltf</p>
           </div>
+        </div>
 
-          <div class="upload-card" id="upload-card">
-            <div class="upload-zone" id="upload-zone">
-              <div class="upload-icon">
-                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="8" y="8" width="48" height="48" rx="12" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4"/>
-                  <path d="M32 40V24M32 24L26 30M32 24L38 30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M20 44H44" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-                </svg>
+        <!-- Model info -->
+        <div class="model-info" id="model-info" hidden>
+          <div class="model-info-inner">
+            <div class="model-thumb">
+              <svg viewBox="0 0 40 40" fill="none">
+                <path d="M20 4L36 13V27L20 36L4 27V13L20 4Z" stroke="url(#g3)" stroke-width="2" fill="none"/>
+                <defs><linearGradient id="g3" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>
+              </svg>
+            </div>
+            <div class="model-details">
+              <p class="model-name" id="model-name">—</p>
+              <p class="model-size" id="model-size">—</p>
+            </div>
+            <div class="status-badge success">読込済</div>
+          </div>
+        </div>
+
+        <!-- Start button -->
+        <div class="action-area">
+          <button id="start-btn" class="btn btn-primary" disabled>
+            <span class="btn-icon">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 2C7.03 2 3 6.03 3 11C3 16 8 21 12 22C16 21 21 16 21 11C21 6.03 16.97 2 12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                <path d="M9 9V15M9 9C9 7.9 9.9 7 11 7C12.1 7 13 7.9 13 9V13M13 13V8M13 8C13 6.9 13.9 6 15 6C16.1 6 17 6.9 17 8V13C17 16.3 14.3 19 11 19C7.7 19 5 16.3 5 13V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </span>
+            カメラを起動
+          </button>
+          <p class="ar-note" id="ar-note">GLBファイルを読み込むと起動できます</p>
+        </div>
+
+        <!-- Gesture Guide -->
+        <div class="gesture-guide">
+          <h2 class="guide-title">ジェスチャーガイド</h2>
+          <div class="gesture-list">
+            <div class="gesture-item">
+              <div class="gesture-icon right">✋</div>
+              <div class="gesture-desc">
+                <strong>右手のひら上向き</strong>
+                <span>モデルを手のひらに召喚</span>
               </div>
-              <p class="upload-title">GLBファイルをここにドロップ</p>
-              <p class="upload-sub">または</p>
-              <label for="file-input" class="btn btn-secondary" id="file-btn">
-                ファイルを選択
-              </label>
-              <input type="file" id="file-input" accept=".glb,.gltf" hidden />
-              <p class="upload-hint">対応形式: .glb / .gltf</p>
             </div>
-          </div>
-
-          <div class="model-info" id="model-info" hidden>
-            <div class="model-info-inner">
-              <div class="model-thumb">
-                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 4L36 13V27L20 36L4 27V13L20 4Z" stroke="url(#grad3)" stroke-width="2" fill="none"/>
-                  <defs><linearGradient id="grad3" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>
-                </svg>
+            <div class="gesture-item">
+              <div class="gesture-icon left">🤏→🖐️</div>
+              <div class="gesture-desc">
+                <strong>左手ピンチアウト</strong>
+                <span>モデルを拡大（スマホの画面拡大のように）</span>
               </div>
-              <div class="model-details">
-                <p class="model-name" id="model-name">—</p>
-                <p class="model-size" id="model-size">—</p>
+            </div>
+            <div class="gesture-item">
+              <div class="gesture-icon left">✊</div>
+              <div class="gesture-desc">
+                <strong>左手を握る</strong>
+                <span>モデルが粒子状にはじけ飛ぶ</span>
               </div>
-              <div class="status-badge success">読込済</div>
+            </div>
+            <div class="gesture-item">
+              <div class="gesture-icon left">🖐️</div>
+              <div class="gesture-desc">
+                <strong>左手を開く</strong>
+                <span>モデルが再召喚される</span>
+              </div>
             </div>
           </div>
+        </div>
 
-          <div class="action-area">
-            <button id="ar-btn" class="btn btn-primary" disabled>
-              <span class="btn-icon">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 7V5C3 3.89543 3.89543 3 5 3H7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M17 3H19C20.1046 3 21 3.89543 21 5V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M21 17V19C21 20.1046 20.1046 21 19 21H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M7 21H5C3.89543 21 3 20.1046 3 19V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                </svg>
-              </span>
-              ARカメラを起動
-            </button>
-            <p class="ar-note" id="ar-note">GLBファイルを読み込むとARが起動できます</p>
-          </div>
+      </div>
+    </div>
 
-          <div class="steps-guide">
-            <div class="step">
-              <div class="step-num">1</div>
-              <div class="step-text">GLBファイルを選択</div>
-            </div>
-            <div class="step-arrow">→</div>
-            <div class="step">
-              <div class="step-num">2</div>
-              <div class="step-text">ARカメラを起動</div>
-            </div>
-            <div class="step-arrow">→</div>
-            <div class="step">
-              <div class="step-num">3</div>
-              <div class="step-text">床・机をスキャン</div>
-            </div>
-            <div class="step-arrow">→</div>
-            <div class="step">
-              <div class="step-num">4</div>
-              <div class="step-text">タップして設置</div>
-            </div>
+    <!-- ── AR View ── -->
+    <div id="ar-view" hidden>
+      <!-- Camera video feed -->
+      <video id="camera-video" autoplay playsinline muted></video>
+      <!-- Three.js canvas (overlay) -->
+      <canvas id="three-canvas"></canvas>
+      <!-- MediaPipe debug canvas (optional) -->
+      <canvas id="hand-canvas"></canvas>
+
+      <!-- HUD -->
+      <div id="hud">
+        <div class="hud-top">
+          <button id="exit-btn" class="hud-btn exit-btn">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            終了
+          </button>
+          <div class="hud-status-pill" id="hud-status-pill">
+            <span class="hud-dot" id="hud-dot"></span>
+            <span id="hud-text">カメラ起動中...</span>
           </div>
+          <div class="hud-spacer"></div>
+        </div>
+
+        <div class="gesture-hint" id="gesture-hint">
+          <div class="hint-bubble">
+            <span id="hint-text">右手のひらを上に向けてください</span>
+          </div>
+        </div>
+
+        <!-- Gesture Feedback -->
+        <div class="gesture-feedback" id="gesture-feedback" hidden>
+          <span id="feedback-emoji">✋</span>
+          <span id="feedback-label">手のひら検出</span>
         </div>
       </div>
     </div>
 
-    <!-- AR Canvas (Three.js renders here) -->
-    <canvas id="ar-canvas"></canvas>
-
-    <!-- AR HUD -->
-    <div id="ar-hud" hidden>
-      <div class="hud-top">
-        <button id="exit-ar-btn" class="hud-btn exit-btn">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-          </svg>
-          終了
-        </button>
-        <div class="hud-status" id="hud-status">
-          <div class="hud-dot scanning"></div>
-          <span id="hud-status-text">平面を探しています...</span>
-        </div>
-        <button id="reset-btn" class="hud-btn reset-btn">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 12C3 7.02944 7.02944 3 12 3C15.3352 3 18.2465 4.7999 19.9 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M21 3V7.5H16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M21 12C21 16.9706 16.9706 21 12 21C8.66481 21 5.75352 19.2001 4.1 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M3 21V16.5H7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          リセット
-        </button>
-      </div>
-      <div class="hud-hint" id="hud-hint">
-        <div class="hint-bubble">
-          <span id="hint-text">カメラを床や机に向けてください</span>
-        </div>
-      </div>
-      <div class="hud-bottom">
-        <p class="tap-label" id="tap-label" hidden>タップしてモデルを設置</p>
-      </div>
-    </div>
-
-    <!-- Loading overlay -->
+    <!-- Loading -->
     <div id="loading-overlay" hidden>
       <div class="loading-spinner"></div>
-      <p id="loading-text">モデルを読み込んでいます...</p>
+      <p id="loading-text">初期化中...</p>
     </div>
 
     <!-- Error Toast -->
