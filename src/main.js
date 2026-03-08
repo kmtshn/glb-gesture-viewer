@@ -66,6 +66,7 @@ let   pinchScale    = 1.0;  // accumulated scale from pinch
 // Fist tracking
 let   wasFist       = false;
 let   wasOpen       = false;
+let   isRunning     = false; // guard flag to prevent race on cleanup
 
 // Particle state
 const PARTICLE_COUNT = 600;
@@ -307,7 +308,7 @@ function getThumbIndexDist(landmarks) {
 
 // ─── AR Session ────────────────────────────────────────────
 startBtn.addEventListener('click', startAR);
-exitBtn.addEventListener('click', stopAR);
+exitBtn.addEventListener('click', () => stopAR());
 
 async function startAR() {
   showLoading('カメラを起動中...');
@@ -335,18 +336,29 @@ async function startAR() {
     });
     mpHands.setOptions({
       maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.6,
+      modelComplexity: 0,          // 0 = lite, more stable on WebGL
+      minDetectionConfidence: 0.65,
+      minTrackingConfidence: 0.55,
     });
     mpHands.onResults(onHandResults);
 
     // Use MediaPipe Camera util
     mediaCamera = new Camera(cameraVideo, {
-      onFrame: async () => { await mpHands.send({ image: cameraVideo }); },
+      onFrame: async () => {
+        // Guard: skip if hands was already closed (race condition fix)
+        if (!isRunning || !mpHands) return;
+        try {
+          await mpHands.send({ image: cameraVideo });
+        } catch (e) {
+          // Silently swallow errors during shutdown
+          if (isRunning) console.warn('MediaPipe send error:', e);
+        }
+      },
       width: 1280, height: 720
     });
     mediaCamera.start();
+
+    isRunning = true;
 
     // Show AR view
     landingScreen.hidden = true;
@@ -364,15 +376,29 @@ async function startAR() {
     hideLoading();
     showError('カメラの起動に失敗しました: ' + (err.message || String(err)));
     console.error(err);
-    stopAR();
+    await stopAR();
   }
 }
 
-function stopAR() {
+async function stopAR() {
+  isRunning = false; // prevent onFrame from sending more frames
+
+  // 1. Stop Camera first (prevents new onFrame calls)
   if (mediaCamera) { mediaCamera.stop(); mediaCamera = null; }
-  if (mpHands)     { mpHands.close(); mpHands = null; }
-  if (stream)      { stream.getTracks().forEach(t => t.stop()); stream = null; }
-  if (renderer3)   { renderer3.setAnimationLoop(null); }
+
+  // 2. Stop stream
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+
+  // 3. Wait for any in-flight MediaPipe.send() to settle before closing
+  await new Promise(r => setTimeout(r, 250));
+
+  // 4. Now safe to close Hands
+  if (mpHands) {
+    try { mpHands.close(); } catch (e) { /* ignore cleanup errors */ }
+    mpHands = null;
+  }
+
+  if (renderer3) { renderer3.setAnimationLoop(null); }
   landingScreen.hidden = false;
   arView.hidden = true;
   modelVisible = false;
