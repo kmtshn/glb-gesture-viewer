@@ -154,12 +154,13 @@ function loadGLBFile(file) {
 // ─── Three.js Setup ────────────────────────────────────────
 function initThree() {
   scene3  = new THREE.Scene();
-  camera3 = new THREE.PerspectiveCamera(60, threeCanvas.clientWidth / threeCanvas.clientHeight, 0.001, 100);
+  camera3 = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.001, 100);
   camera3.position.set(0, 0, 2);
 
   renderer3 = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true, alpha: true });
   renderer3.setPixelRatio(window.devicePixelRatio);
-  renderer3.setSize(threeCanvas.clientWidth, threeCanvas.clientHeight);
+  // Use window dimensions (canvas may still be hidden at init time)
+  renderer3.setSize(window.innerWidth, window.innerHeight);
   renderer3.setClearColor(0x000000, 0);
 
   // Lighting
@@ -295,10 +296,21 @@ function getPalmCenter(landmarks) {
 }
 
 function isPalmFacingUp(landmarks) {
-  // Heuristic: wrist z < MCP z (hand tilted so palm faces camera/upward)
-  const wrist  = landmarks[0];
-  const midMcp = landmarks[9];
-  return wrist.z < midMcp.z - 0.04;
+  // Use cross product of (wrist→indexMCP) × (wrist→pinkyMCP) to determine palm normal.
+  // In mirrored front-camera view, a right-hand palm facing camera yields cross.z > 0.
+  const wrist    = landmarks[0];
+  const indexMcp = landmarks[5];
+  const pinkyMcp = landmarks[17];
+
+  const v1x = indexMcp.x - wrist.x;
+  const v1y = indexMcp.y - wrist.y;
+  const v2x = pinkyMcp.x - wrist.x;
+  const v2y = pinkyMcp.y - wrist.y;
+
+  // 2-D cross product z-component
+  const cross = v1x * v2y - v1y * v2x;
+  // cross > 0  →  palm faces camera (= palm up in selfie)
+  return cross > 0.02; // small threshold to avoid noise
 }
 
 function getThumbIndexDist(landmarks) {
@@ -360,10 +372,13 @@ async function startAR() {
 
     isRunning = true;
 
-    // Show AR view
+    // Show AR view BEFORE render loop so canvas has layout dimensions
     landingScreen.hidden = true;
     arView.hidden = false;
     hideLoading();
+
+    // Re-apply correct size now that the canvas is visible
+    resizeCanvases();
 
     hudDot.className = 'hud-dot';
     hudText.textContent = '手を検知中...';
@@ -426,15 +441,18 @@ function onHandResults(results) {
     drawLandmarks(handCtx, landmarks, { color: 'rgba(6,182,212,0.85)', lineWidth: 1, radius: 3 });
   }
 
-  // Determine which is left/right (MediaPipe gives "Left"/"Right" from user's perspective,
-  // but since we mirror the video, we swap the labels)
-  let rightHand = null; // will hold landmark array for right hand (user's right = camera left)
+  // ── Determine hand identity ──────────────────────────────────────────────
+  // @mediapipe/hands (legacy CDN) labels from the *model* perspective.
+  // → In a front (selfie/mirrored) camera "Left" = user's RIGHT hand, "Right" = user's LEFT.
+  // We therefore SWAP the labels here.
+  let rightHand = null;
   let leftHand  = null;
 
   for (let i = 0; i < results.multiHandLandmarks.length; i++) {
-    const label = results.multiHandedness[i].label; // "Left" or "Right" (mirror corrected)
-    if (label === 'Right') rightHand = results.multiHandLandmarks[i];
-    if (label === 'Left')  leftHand  = results.multiHandLandmarks[i];
+    const label = results.multiHandedness[i].label;
+    // flip: MediaPipe "Left" ↔ user's right hand in mirrored selfie
+    if (label === 'Left')  rightHand = results.multiHandLandmarks[i];
+    if (label === 'Right') leftHand  = results.multiHandLandmarks[i];
   }
 
   // ── Right hand: palm-up check → show/position model ──
@@ -520,21 +538,21 @@ function onHandResults(results) {
 // ─── Model positioning & show/hide ─────────────────────────
 function positionModelOnPalm(palmCenter) {
   if (!modelGroup) return;
-  // Map normalized MediaPipe coords (0..1) to Three.js scene coords.
-  // palmCenter.x is 0=left, 1=right (mirrored), palmCenter.y is 0=top, 1=bottom
-  // Since we flipped the video with css scaleX(-1), but MediaPipe works on raw feed,
-  // we need to mirror X: scene_x = (0.5 - palmCenter.x) * viewWidth
-  const aspect = threeCanvas.clientWidth / threeCanvas.clientHeight;
+  // Map normalized MediaPipe coords to Three.js scene world coords.
+  // Use window dimensions (always valid, even when canvas layout is not yet settled).
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const aspect = w / h;
   const fovRad = THREE.MathUtils.degToRad(60);
   const dist   = camera3.position.z;
   const viewH  = 2 * dist * Math.tan(fovRad / 2);
   const viewW  = viewH * aspect;
 
+  // palmCenter.x: 0=left edge, 1=right edge (in raw MediaPipe = already mirrored for selfie)
   const sceneX = (0.5 - palmCenter.x) * viewW;
   const sceneY = (0.5 - palmCenter.y) * viewH;
-  const sceneZ = 0;
 
-  modelGroup.position.lerp(new THREE.Vector3(sceneX, sceneY, sceneZ), 0.15);
+  modelGroup.position.lerp(new THREE.Vector3(sceneX, sceneY, 0), 0.18);
 }
 
 function showModel() {
